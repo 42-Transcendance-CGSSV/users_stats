@@ -1,0 +1,9 @@
+.env
+.idea/
+.vscode/
+node_modules/
+output/
+package-lock.json
+.github/
+/.github/
+/data/auth_database.db

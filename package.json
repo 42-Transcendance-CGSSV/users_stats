@@ -1,0 +1,42 @@
+{
+  "name": "auth_service",
+  "version": "1.0.0",
+  "description": "Auth service for ft_transcendance (42 final common core project)",
+  "main": "src/app.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "tsc -p tsconfig.json && node 'output/app.js'",
+    "lint": "eslint 'src/**/*.ts'",
+    "format": "prettier --write 'src/**/*.ts' 'src/*.ts'",
+    "test": "jest"
+  },
+  "author": "sabejaou",
+  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/lodash": "^4.17.16",
+    "@types/node": "^22.13.11",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-prettier": "^5.2.5",
+    "jest": "^29.7.0",
+    "pino-pretty": "^13.0.0",
+    "prettier": "^3.5.3",
+    "ts-jest": "^29.3.1",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "fastify": "^5.2.1",
+    "fluent-json-schema": "^5.0.0",
+    "lodash": "^4.17.21",
+    "sqlite3": "^5.1.7"
+  }
+}

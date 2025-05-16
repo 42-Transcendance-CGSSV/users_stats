@@ -6,7 +6,7 @@ export let db: Database;
 
 import { createMatchWinTable } from "../repositories/match_win.repository";
 import { createMatchStatsTable } from "../repositories/match_stats.repository";
-import { createAchievementsTable } from "../repositories/achievements.repository";
+import { createAchievementsTable, insertDefaultAchievements } from "../repositories/achievements.repository";
 import { createUserAchievementsTable } from "../repositories/user_achievements.repository";
 
 export function setDatabase(database: Database) {
@@ -39,6 +39,10 @@ export async function createDatabase(app: FastifyInstance): Promise<void> {
         app.log.info("   Creating user achievements table...");
         await createUserAchievementsTable();
         app.log.info("   User achievements table created successfully!");
+        
+        app.log.info("   Initializing default achievements...");
+        await insertDefaultAchievements();
+        app.log.info("   Default achievements initialized successfully!");
         
     } catch (error) {
         app.log.error("An error occurred while creating the database");

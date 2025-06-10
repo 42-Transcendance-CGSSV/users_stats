@@ -1,192 +1,142 @@
-import { Router, RequestHandler } from 'express';
+import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import { getMatchesPage, getMatchDetails, getGlobalMatchHistory, insertMatchOutcome } from '../repositories/match_history.repository';
 
-const router = Router();
+interface MatchQuery {
+    page?: string;
+    pageSize?: string;
+    userId?: string;
+}
 
-// GET /api/matches/global
-const getGlobalHistoryHandler: RequestHandler = async (req, res) => {
-    const page = parseInt(req.query.page as string || '1');
-    const pageSize = parseInt(req.query.pageSize as string || '20');
+interface MatchParams {
+    matchId?: string;
+    userId?: string;
+}
 
-    if (page <= 0) {
-        res.status(400).json({ error: 'Invalid page number' });
-        return;
-    }
+interface MatchBody {
+    winnerId: string;
+    loserId: string;
+    winnerStats: {
+        touchedBalls: number;
+        maxStreak: number;
+        duration: number;
+    };
+    loserStats: {
+        touchedBalls: number;
+        maxStreak: number;
+        duration: number;
+    };
+}
 
-    if (pageSize <= 0 || pageSize > 100) {
-        res.status(400).json({ error: 'Invalid page size' });
-        return;
-    }
+const matchHistoryRoutes: FastifyPluginAsync = async (fastify) => {
+    // GET /api/matches/global
+    fastify.get('/matches/global', async (request: FastifyRequest<{ Querystring: MatchQuery }>, reply) => {
+        const page = parseInt(request.query.page || '1');
+        const pageSize = parseInt(request.query.pageSize || '20');
 
-    try {
-        const result = await getGlobalMatchHistory(page, pageSize);
-        res.json(result);
-    } catch (error) {
-        console.error('Error fetching global match history:', error);
-        res.status(500).json({ error: 'Failed to fetch global match history' });
-    }
-};
-
-// GET /api/users/:userId/matches
-const getUserMatchesHandler: RequestHandler = async (req, res) => {
-    const userId = parseInt(req.params.userId);
-    const page = parseInt(req.query.page as string || '1');
-    const pageSize = parseInt(req.query.pageSize as string || '20');
-
-    if (isNaN(userId)) {
-        res.status(400).json({ error: 'Invalid user ID' });
-        return;
-    }
-
-    if (page <= 0) {
-        res.status(400).json({ error: 'Invalid page number' });
-        return;
-    }
-
-    if (pageSize <= 0 || pageSize > 100) {
-        res.status(400).json({ error: 'Invalid page size' });
-        return;
-    }
-
-    try {
-        const result = await getMatchesPage(userId, page, pageSize);
-        res.json(result);
-    } catch (error) {
-        console.error('Error fetching user match history:', error);
-        res.status(500).json({ error: 'Failed to fetch user match history' });
-    }
-};
-
-// GET /api/matches/:matchId
-const getMatchHandler: RequestHandler = async (req, res) => {
-    const { matchId } = req.params;
-    const userId = req.query.userId ? parseInt(req.query.userId as string) : undefined;
-
-    if (!matchId) {
-        res.status(404).json({ error: 'Match not found' });
-        return;
-    }
-
-    try {
-        const match = await getMatchDetails(matchId, userId);
-        if (!match) {
-            res.status(404).json({ error: 'Match not found' });
-            return;
+        if (page <= 0) {
+            return reply.status(400).send({ error: 'Invalid page number' });
         }
-        res.json(match);
-    } catch (error) {
-        console.error('Error fetching match details:', error);
-        res.status(500).json({ error: 'Failed to fetch match details' });
-    }
-};
 
-/**
- * @swagger
- * /api/matches:
- *   post:
- *     summary: Insert a match outcome and update achievements
- *     tags: [Matches]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - winnerId
- *               - loserId
- *               - winnerStats
- *               - loserStats
- *             properties:
- *               winnerId:
- *                 type: string
- *                 description: ID of the winning user
- *               loserId:
- *                 type: string
- *                 description: ID of the losing user
- *               winnerStats:
- *                 type: object
- *                 properties:
- *                   touchedBalls:
- *                     type: number
- *                   maxStreak:
- *                     type: number
- *                   duration:
- *                     type: number
- *               loserStats:
- *                 type: object
- *                 properties:
- *                   touchedBalls:
- *                     type: number
- *                   maxStreak:
- *                     type: number
- *                   duration:
- *                     type: number
- *     responses:
- *       201:
- *         description: Match outcome successfully recorded
- *       400:
- *         description: Invalid input data
- *       500:
- *         description: Server error
- */
-const postMatchHandler: RequestHandler = async (req, res) => {
-  try {
-    const { winnerId, loserId, winnerStats, loserStats } = req.body;
-    
-    console.log('POST /api/matches - Request body:', JSON.stringify(req.body, null, 2));
+        if (pageSize <= 0 || pageSize > 100) {
+            return reply.status(400).send({ error: 'Invalid page size' });
+        }
 
-    // Validate required fields
-    if (!winnerId || !loserId || !winnerStats || !loserStats) {
-      console.log('Missing required fields:', { winnerId, loserId, winnerStats, loserStats });
-      res.status(400).json({ error: 'Missing required fields' });
-      return;
-    }
-
-    // Validate stats objects
-    if (!winnerStats.touchedBalls || !winnerStats.maxStreak || !winnerStats.duration ||
-        !loserStats.touchedBalls || !loserStats.maxStreak || !loserStats.duration) {
-      console.log('Missing required stats fields:', { winnerStats, loserStats });
-      res.status(400).json({ error: 'Missing required stats fields' });
-      return;
-    }
-
-    console.log('Attempting to insert match outcome with params:', {
-      winnerId, loserId, 
-      winnerTouchedBalls: winnerStats.touchedBalls,
-      winnerMaxStreak: winnerStats.maxStreak,
-      winnerDuration: winnerStats.duration,
-      loserTouchedBalls: loserStats.touchedBalls,
-      loserMaxStreak: loserStats.maxStreak,
-      loserDuration: loserStats.duration
+        try {
+            const result = await getGlobalMatchHistory(page, pageSize);
+            return result;
+        } catch (error) {
+            console.error('Error fetching global match history:', error);
+            return reply.status(500).send({ error: 'Failed to fetch global match history' });
+        }
     });
 
-    // Insert match outcome and update achievements
-    const matchId = await insertMatchOutcome(
-      winnerId,
-      loserId,
-      winnerStats.touchedBalls,
-      winnerStats.maxStreak,
-      winnerStats.duration,
-      loserStats.touchedBalls,
-      loserStats.maxStreak,
-      loserStats.duration
-    );
+    // GET /api/users/:userId/matches
+    fastify.get('/users/:userId/matches', async (request: FastifyRequest<{ Params: MatchParams, Querystring: MatchQuery }>, reply) => {
+        const userId = parseInt(request.params.userId || '');
+        const page = parseInt(request.query.page || '1');
+        const pageSize = parseInt(request.query.pageSize || '10');
 
-    console.log('Match outcome successfully recorded with matchId:', matchId);
-    res.status(201).json({
-      message: 'Match outcome successfully recorded',
-      matchId
+        if (isNaN(userId)) {
+            return reply.status(400).send({ error: 'Invalid user ID' });
+        }
+
+        if (page <= 0) {
+            return reply.status(400).send({ error: 'Invalid page number' });
+        }
+
+        if (pageSize <= 0 || pageSize > 100) {
+            return reply.status(400).send({ error: 'Invalid page size' });
+        }
+
+        try {
+            const result = await getMatchesPage(userId, page, pageSize);
+            return result;
+        } catch (error) {
+            console.error('Error fetching user match history:', error);
+            return reply.status(500).send({ error: 'Failed to fetch user match history' });
+        }
     });
-  } catch (error) {
-    console.error('Error recording match outcome:', error);
-    res.status(500).json({ error: 'Failed to record match outcome' });
-  }
+
+    // GET /api/matches/:matchId
+    fastify.get('/matches/:matchId', async (request: FastifyRequest<{ Params: MatchParams, Querystring: MatchQuery }>, reply) => {
+        const { matchId } = request.params;
+        const userId = request.query.userId ? parseInt(request.query.userId) : undefined;
+
+        if (!matchId) {
+            return reply.status(404).send({ error: 'Match not found' });
+        }
+
+        try {
+            const match = await getMatchDetails(matchId, userId);
+            if (!match) {
+                return reply.status(404).send({ error: 'Match not found' });
+            }
+            return match;
+        } catch (error) {
+            console.error('Error fetching match details:', error);
+            return reply.status(500).send({ error: 'Failed to fetch match details' });
+        }
+    });
+
+    // POST /api/matches
+    fastify.post('/matches', async (request: FastifyRequest<{ Body: MatchBody }>, reply) => {
+        try {
+            const { winnerId, loserId, winnerStats, loserStats } = request.body;
+            
+            console.log('POST /api/matches - Request body:', JSON.stringify(request.body, null, 2));
+
+            if (!winnerId || !loserId || !winnerStats || !loserStats) {
+                console.log('Missing required fields:', { winnerId, loserId, winnerStats, loserStats });
+                return reply.status(400).send({ error: 'Missing required fields' });
+            }
+
+            if (!winnerStats.touchedBalls || !winnerStats.maxStreak || !winnerStats.duration ||
+                !loserStats.touchedBalls || !loserStats.maxStreak || !loserStats.duration) {
+                console.log('Missing required stats fields:', { winnerStats, loserStats });
+                return reply.status(400).send({ error: 'Missing required stats fields' });
+            }
+
+            const matchId = await insertMatchOutcome(
+                winnerId,
+                loserId,
+                winnerStats.touchedBalls,
+                winnerStats.maxStreak,
+                winnerStats.duration,
+                loserStats.touchedBalls,
+                loserStats.maxStreak,
+                loserStats.duration
+            );
+
+            console.log('Match outcome successfully recorded with matchId:', matchId);
+            return reply.status(201).send({
+                message: 'Match outcome successfully recorded',
+                matchId
+            });
+        } catch (error) {
+            console.error('Error recording match outcome:', error);
+            return reply.status(500).send({ error: 'Failed to record match outcome' });
+        }
+    });
 };
 
-router.get('/matches/global', getGlobalHistoryHandler);
-router.get('/matches/:matchId', getMatchHandler);
-router.get('/users/:userId/matches', getUserMatchesHandler);
-router.post('/matches', postMatchHandler);
-
-export default router; 
+export default matchHistoryRoutes; 
